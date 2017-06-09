@@ -10,24 +10,50 @@ module.exports = function (batch, cb) {
 	if (err) return cb(err);
 
 	const prefix = batch.split(".")[0];
+	const active = new Map();
 	
-	async.each(JSON.parse(data), function (item, cb) {
+	async.eachLimit(JSON.parse(data), 6, function (item, cb) {
+	    const id = item["ID"];
 	    const path = item["S3"].split("/");
 	    const pathSplit = [path[0], path.slice(1).join("/")];
-	    console.log(pathSplit);
-	    const s = fs.createWriteStream(path[path.length - 1]);
-	    const os = s3.getObject({
-		Bucket: pathSplit[0],
-		Key: pathSplit[1]
-	    }, function (err, data) {
-		if (err) cb(err);
-	    }).createReadStream().pipe(s);
-	    os.on("error", function (err) { cb(err); });
-	    os.on("finish", function () { cb(); });
+	    const localPath = path[path.length - 1];
+
+	    fs.access(localPath, fs.constants.F_OK, function (err) {
+		if (err) {
+		    console.log(pathSplit);
+		    active.set(id, localPath);
+		    const s = fs.createWriteStream(localPath);
+		    const os = s3.getObject({
+			Bucket: pathSplit[0],
+			Key: pathSplit[1]
+		    }, function (err, data) {
+			if (err) {
+			    cb(err);
+			}
+			else {
+			    active.delete(id);
+			    cb();
+			}
+		    }).createReadStream().pipe(s);
+		}
+		else {
+		    cb();
+		}
+	    });
 	}, function (err) {
-	    if (err) cb(err);
+	    if (err) {
+		async.each(active, function (item, cb) {
+		    fs.unlink(item[1], function (err) {
+			if (err) console.error(err);
+			cb();
+		    });
+		}, function (unlinkerr) {
+		    cb(err);
+		});
+	    }
+	    else {
+		cb();
+	    }
 	});
-	
-	return cb();
     });
 };
