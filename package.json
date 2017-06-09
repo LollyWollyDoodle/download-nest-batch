@@ -1,0 +1,15 @@
+{
+  "name": "@lwd/download-nest-batch",
+  "version": "0.1.0",
+  "description": "Download a print nest batch for local testing",
+  "main": "index.js",
+  "bin": "./cli.js",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LollyWollyDoodle/download-nest-batch.git"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.66.0"
+  }
+}
