@@ -10,6 +10,7 @@
     "url": "https://github.com/LollyWollyDoodle/download-nest-batch.git"
   },
   "dependencies": {
+    "async": "^2.4.1",
     "aws-sdk": "^2.66.0"
   }
 }
