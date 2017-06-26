@@ -1,4 +1,5 @@
 const fs = require("fs");
+const zlib = require("zlib");
 
 const async = require("async");
 const AWS = require("aws-sdk");
@@ -16,13 +17,35 @@ module.exports = function (batch, cb) {
 	    const path = item["S3"].split("/");
 	    const pathSplit = [path[0], path.slice(1).join("/")];
 	    console.log(pathSplit);
-	    const s = fs.createWriteStream(path[path.length - 1]);
-	    const os = s3.getObject({
-		Bucket: pathSplit[0],
-		Key: pathSplit[1]
-	    }).createReadStream().pipe(s);
-	    os.on("error", function (err) { cb(err); });
-	    os.on("finish", function () { cb(); });
+
+	    async.waterfall([function (cb) {
+		s3.headObject({
+		    Bucket: pathSplit[0],
+		    Key: pathSplit[1]
+		}, cb);
+	    }, function (objectMetadata, cb) {
+		var s = s3.getObject({
+		    Bucket: pathSplit[0],
+		    Key: pathSplit[1]
+		}).createReadStream();
+
+		if (objectMetadata.ContentEncoding) {
+		    let cs;
+		    if (objectMetadata.ContentEncoding === "gzip") {
+			cs = zlib.createGunzip();
+		    }
+		    else {
+			return cb(new Error("Unrecognized Content-Encoding"));
+		    }
+		    s = s.pipe(cs);
+		}
+
+		s = s.pipe(fs.createWriteStream(path[path.length - 1]));
+		s.on("error", function (err) { cb(err); });
+		s.on("finish", function () { cb(); });
+	    }], function (err) {
+		cb(err);
+	    });
 	}, function (err) {
 	    if (err) {
 		async.each(active, function (item, cb) {
