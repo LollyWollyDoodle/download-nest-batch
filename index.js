@@ -13,7 +13,7 @@ module.exports = function (batch, cb) {
 	const prefix = batch.split(".")[0];
 	const active = new Map();
 	
-	async.eachLimit(JSON.parse(data), 6, function (item, cb) {
+	return async.eachLimit(JSON.parse(data), 6, function (item, cb) {
 	    const path = item["S3"].split("/");
 	    const pathSplit = [path[0], path.slice(1).join("/")];
 	    console.log(pathSplit);
@@ -43,6 +43,7 @@ module.exports = function (batch, cb) {
 		s = s.pipe(fs.createWriteStream(path[path.length - 1]));
 		s.on("error", function (err) { cb(err); });
 		s.on("finish", function () { cb(); });
+		return null;
 	    }], function (err) {
 		cb(err);
 	    });
