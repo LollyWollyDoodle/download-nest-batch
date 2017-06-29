@@ -11,9 +11,9 @@ module.exports = function (batch, cb) {
 	if (err) return cb(err);
 
 	const prefix = batch.split(".")[0];
-	const active = new Map();
 	
 	return async.eachLimit(JSON.parse(data), 6, function (item, cb) {
+	    const id = item["ID"];
 	    const path = item["S3"].split("/");
 	    const pathSplit = [path[0], path.slice(1).join("/")];
 	    console.log(pathSplit);
@@ -40,7 +40,7 @@ module.exports = function (batch, cb) {
 		    s = s.pipe(cs);
 		}
 
-		s = s.pipe(fs.createWriteStream(path[path.length - 1]));
+		s = s.pipe(fs.createWriteStream(id + "-" + path[path.length - 1]));
 		s.on("error", function (err) { cb(err); });
 		s.on("finish", function () { cb(); });
 		return null;
@@ -48,19 +48,7 @@ module.exports = function (batch, cb) {
 		cb(err);
 	    });
 	}, function (err) {
-	    if (err) {
-		async.each(active, function (item, cb) {
-		    fs.unlink(item[1], function (err) {
-			if (err) console.error(err);
-			cb();
-		    });
-		}, function (unlinkerr) {
-		    cb(err);
-		});
-	    }
-	    else {
-		cb();
-	    }
+	    return cb(err);
 	});
     });
 };
